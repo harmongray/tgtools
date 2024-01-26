@@ -8,8 +8,7 @@
 #'
 #' @return A data.frame object with the same structure as `x`, but with columns
 #'  coerced to match those in `vec`.
-#'
-#' @keywords internal
+#' @noRd
 .coerce_df <- function(df, vec) {
   df[] <- lapply(names(df), function(colname) {
     column_data <- df[[colname]]
@@ -34,6 +33,7 @@
 #' @param df A data frame whose columns are to be validated.
 #' @param valid_cols A vector of strings representing the name of valid columns.
 #'  in `tg_normalize`.
+#' @noRd
 .validate_cols <- function(df, valid_cols) {
   all(names(df) %in% valid_cols)
 }
@@ -47,6 +47,7 @@
 #'  be coerced to the same vector type.
 #' @param type_func A function that specifies the data type to which each each
 #'  column should be initalized.
+#' @noRd
 .initialize_cols <- function(col_names, type_func) {
 
   lapply(setNames(nm = col_names), function(x) type_func(NA))
@@ -69,10 +70,10 @@
 #' should be bound into a single data.frame object. If TRUE, a single data.frame
 #' is returned. If FALSE, a list of data.frames is returned.
 #'
-#' @param datecol A Boolean argument to add a "day" column, which is an as.date()
+#' @param datecol A Boolean argument to add a "date" column, which is an as.date()
 #'  coercion that makes per day statistical data easier.
 #'
-#' @return A data.frame (or list of data.frames if bind=FALSE)
+#' @return A data.frame (or list of data.frames if bind = FALSE)
 #'
 #' @export
 tg_normalize <- function(tg_list, lib = "telescrape", bind = FALSE, datecol=FALSE) {
@@ -85,13 +86,15 @@ tg_normalize <- function(tg_list, lib = "telescrape", bind = FALSE, datecol=FALS
                       "bot_url", "parent", "forward",
                       "forward_id", "forward_msg_id", "media", "URLs")
     datetime_cols <- c("timestamp", "edit.date", "forward_date")
+    date_cols <- c("date")
 
     # cbind valid columns
     telescrape_header <- cbind.data.frame(
       .initialize_cols(logical_cols, as.logical),
       .initialize_cols(numeric_cols, as.numeric),
       .initialize_cols(character_cols, as.character),
-      .initialize_cols(datetime_cols, as.character)
+      .initialize_cols(datetime_cols, as.character),
+      .initialize_cols(date_cols, as.character)
     )
 
     # future .json export definition will go here:
@@ -133,9 +136,14 @@ tg_normalize <- function(tg_list, lib = "telescrape", bind = FALSE, datecol=FALS
     inter$forward_date <- as_datetime(inter$forward_date)
     inter$timestamp <- as_datetime(inter$timestamp)
 
+    if ("date" %in% colnames(date)) {
+
+      inter$date <- as.Date(inter$timestamp)
+
+    }
     if (datecol) {
 
-      inter$day <- as.Date(inter$timestamp)
+      inter$date <- as.Date(inter$timestamp)
 
     }
 
