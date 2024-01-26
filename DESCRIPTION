@@ -5,8 +5,7 @@ Authors@R:
     person("Harmon", "Grey", , "greytradecraft@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-0341-6274"))
 Description: tgtools handles various inputs of standardized Telegram API data 
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.1

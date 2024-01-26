@@ -2,18 +2,25 @@
 % Please edit documentation in R/validate_tg.R
 \name{validate_tg}
 \alias{validate_tg}
-\title{Processing data returned from the telethon channel.getMessages Python Telethon
-interface for accessing the Telegram API}
+\title{Validate Telegram data}
 \usage{
-validate_tg(tg_list, bind = FALSE)
+validate_tg(tg_list, lib, bind = FALSE)
 }
 \arguments{
-\item{tg_list}{a list of data.frame objects or a data.frame object. All data
-in each data.frame object have their vector types normalized}
+\item{tg_list}{A list of data.frame objects or a data.frame object. All data
+in each data.frame object have their vector types normalized.}
 
-\item{bind}{a boolean arg to coerce to data.frame object}
+\item{lib}{A string with the name of the library API that constructed the
+supplied data.frame object.}
+
+\item{bind}{A Boolean argument to determine if the list of data.frame objects
+should be bound into a single data.frame object. If TRUE, a single data.frame
+is returned. If FALSE, a list of data.frames is returned.}
+}
+\value{
+A data.frame (or list of data.frames if bind=FALSE)
 }
 \description{
-Processing data returned from the telethon channel.getMessages Python Telethon
-interface for accessing the Telegram API
+\code{validate_tg} validates the input data from a list of data.frames or a data.frame
+object with the option of binding them to a single data.frame.
 }

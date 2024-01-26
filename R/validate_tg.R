@@ -1,99 +1,98 @@
-#' Processing data returned from the telethon channel.getMessages Python Telethon
-#'  interface for accessing the Telegram API
-#' @param tg_list a list of data.frame objects or a data.frame object. All data
-#'  in each data.frame object have their vector types normalized
-#' @param bind a boolean arg to coerce to data.frame object
+#' .coerce_df internal
+#' @param x A data.frame object with columns that need to be coerced
+#' @param vec A reference data.frame object with target data types.
+#'
+#' @return A data.frame object with the same structure as `x`, but with columns
+#'  coerced to match those in `vec`.
+#'
+#' @keywords internal
+.coerce_df <- function(x, vec) {
+  y <- sapply(names(x), function(colname) {
+    column_data <- x[[colname]]
+
+    if (colname %in% names(vec)) {
+      type <- class(vec[[colname]])
+      column_data <- type.convert(column_data, as.is=TRUE, mode=type)
+    }
+
+    return(column_data)
+  })
+
+  return(as.data.frame(y))
+}
+
+#' Validate Telegram Data
+#'
+#' `validate_tg` validates the input data from a list of data.frames or a data.frame
+#' object with the option of binding them to a single data.frame.
+#'
+#' @param tg_list A list of data.frame objects or a data.frame object. All data
+#' in each data.frame object have their vector types normalized.
+#'
+#' @param lib A string with the name of the library API that constructed the
+#' supplied data.frame object.
+#'
+#' @param bind A Boolean argument to determine if the list of data.frame objects
+#' should be bound into a single data.frame object. If TRUE, a single data.frame
+#' is returned. If FALSE, a list of data.frames is returned.
+#'
+#' @return A data.frame (or list of data.frames if bind=FALSE)
+#'
 #' @export
-validate_tg <- function(tg_list, bind = FALSE) {
+validate_tg <- function(tg_list, lib, bind = FALSE) {
+  telescrape_header <- data.frame(
+    channel = character(),
+    member_count = logical(),
+    broadcast = logical(),
+    id = numeric(),
+    timestamp = as_datetime(character()),
+    content = character(),
+    user_id = numeric(),
+    first_and_last_name = character(),
+    username = character(),
+    views = numeric(),
+    edit.date = as_datetime(character()),
+    forward = character(),
+    forward_id = character(),
+    forward_msg_id = character(),
+    forward_date = as_datetime(character()),
+    media = character(),
+    hasComments = logical(),
+    isComment = logical(),
+    bot_url = character(),
+    parent = character(),
+    isDeleted = logical()
+  )
 
-  if (is.data.frame(tg_list) == TRUE) {
+  api_definition <- data.frame(channel_name = character())
 
-    tg_list <- as.list(tg_list)
+  if (lib %in% c("telescrape", "api")) {
+    if (lib == "telescrape") {
+      header.defined <- telescrape_header
+    } else if (lib == "api") {
+      header.defined <- api_definition
+    }
 
-    return(tg_list)
+    if (is.data.frame(tg_list)) {
+      inter <- .coerce_df(tg_list, header.defined)
+      inter$day <- as.Date(inter$timestamp)
 
+    } else if (is.list(tg_list)) {
+      inter <- lapply(tg_list, function(x) {
+        validate_tg(x, lib = lib)
+      })
+
+      if (bind) {
+        inter <- inter |> bind_rows()
+      }
+
+    } else {
+      stop("Supplied data is not valid for trasnformation. Did you change any names?")
+    }
+
+  } else {
+    stop("Invalid API reference string supplied")
   }
 
-      tg_list <- lapply(tg_list, function(df) {
-
-        channel_index <- match("channel", names(df))
-        df[, channel_index] <- as.character(df[, channel_index])
-
-        member_index <- match("member_count", names(df))
-        df[, member_index] <- as.logical(df[, member_index])
-
-        broadcast_index <- match("broadcast", names(df))
-        df[, broadcast_index] <- as.logical(df[, broadcast_index])
-
-        id_index <- match("id", names(df))
-        df[, id_index] <- as.numeric(df[, id_index])
-
-        timestamp_index <- match("timestamp", names(df))
-        df[, timestamp_index] <- as_datetime(df[, timestamp_index])
-
-        content_index <- match("content", names(df))
-        df[, content_index] <- as.character(df[, content_index])
-
-        user_id_index <- match("user_id", names(df))
-        df[, user_id_index] <- as.numeric(df[, user_id_index])
-
-        first_last_index <- match("first_and_last_name", names(df))
-        df[, first_last_index] <- as.character(df[, first_last_index])
-
-        username_index <- match("username", names(df))
-        df[, username_index] <- as.character(df[, username_index])
-
-        views_index <- match("views", names(df))
-        df[, views_index] <- as.numeric(df[, views_index])
-
-        edit_date_index <- match("edit.date", names(df))
-        df[, edit_date_index] <- as_datetime(df[, edit_date_index])
-
-        forward_index <- match("forward", names(df))
-        df[, forward_index] <- as.character(df[, forward_index])
-
-        forward_id_index <- match("forward_id", names(df))
-        df[, forward_id_index] <- as.character(df[, forward_id_index])
-
-        forward_msg_index <- match("forward_msg_id", names(df))
-        df[, forward_msg_index] <- as.character(df[, forward_msg_index])
-
-        forward_date_index <- match("forward_date", names(df))
-        df[, forward_date_index] <- as_datetime(df[, forward_date_index])
-
-        url_index <- match("URLs", names(df))
-        df[, url_index] <- as.character(df[, url_index])
-
-        media_index <- match("media", names(df))
-        df[, media_index] <- as.character(df[, media_index])
-
-        hasComments_index <- match("hasComments", names(df))
-        df[, hasComments_index] <- as.logical(df[, hasComments_index])
-
-        isComment_index <- match("isComment", names(df))
-        df[, isComment_index] <- as.logical(df[, isComment_index])
-
-        bot_url_index <- match("bot_url", names(df))
-        df[, bot_url_index] <- as.character(df[, bot_url_index])
-
-        parent_index <- match("parent", names(df))
-        df[, parent_index] <- as.character(df[, parent_index])
-
-        isDeleted_index <- match("isDeleted", names(df))
-        df[, isDeleted_index] <- as.logical(df[, isDeleted_index])
-
-        df$day <- as.Date(df$timestamp)
-
-        return(df)
-
-    })
-
-    if (bind) {
-
-      tg_list <- bind_rows(tg_list)
-
-  }
-
-  return(tg_list)
-
+  return(inter)
 }
