@@ -24,7 +24,6 @@
   return(df)
 }
 
-
 #' Validate column names based on string
 #'
 #' `.validate_cols` validates the given columns supplied the tg_list parameter in
@@ -41,7 +40,7 @@
 
 #' Initialize the columns based on type
 #'
-#' This is a lambda function to initialize the column based on the type, each being
+#' This is a lambda to initialize the column based on the type, each being
 #'  constructed with a data.frame of every column name per vector type.
 #' @param col_names A vector of strings representing the names of the columns to
 #'  be coerced to the same vector type.
@@ -51,6 +50,63 @@
 .initialize_cols <- function(col_names, type_func) {
 
   lapply(setNames(nm = col_names), function(x) type_func(NA))
+
+}
+
+
+#' Process URLs in flat data frame if lib = "telescrape"
+#'
+#' @param table A data.frame containing the column 'URLs'. Each row in the table
+#'  may be empty, a single element, or a list of elements. `.vector_logic` coerces
+#'  to a list via `split_str(table$column[[i]], pattern = ",")` to allow simple
+#'  conditional access to each element. This case is currently concerned with the
+#'  case of removing an unmatched parenthesis.
+#' @noRd
+.fix_url_vec <-  function(table = table) {
+
+  for (i in 1:nrow(table)) {
+
+    # This uses table$URLs -- if you needed, any other field could be modified
+    # here to modify any data with flattened, but nestable data
+
+    # creating the split_string list:
+    split_string <- str_split(table$URLs[[i]], pattern=",")
+
+    # access vector
+    for (j in seq_along(split_string)) {
+
+      # anything needing done to a vector happens here
+      # conditional ... e.g.:
+      # if (str_count(split_string[[j]]))
+
+
+      # access elements
+      for (k in seq_along(split_string[[j]])) {
+
+        # anything needing done in elements happens here
+        # single element:
+        k_elem <- trimws(split_string[[j]][k])
+
+        if (str_count(k_elem, pattern = "\\)") > 0) {
+
+          k_elem <- str_remove(k_elem, pattern = "\\)")
+          split_string[[j]][k]
+
+        }
+
+        # reassigning the output of k_elem transformations:
+        split_string[[j]][k] <- k_elem
+
+      }
+
+    }
+
+    # flatten it out for the data.frame
+    table$URLs[i] <- paste(unlist(split_string[j]), collapse = ",")
+
+  }
+
+  return(table)
 
 }
 
@@ -75,78 +131,84 @@
 #'
 #' @return A data.frame (or list of data.frames if bind = FALSE)
 #'
+#' @example test2 <- tg_normalize(test, lib="telescrape", bind=TRUE, meta=FALSE)
 #' @export
-tg_normalize <- function(tg_list, lib = "telescrape", bind = FALSE, datecol=FALSE) {
+tg_normalize <- function(tg_list, lib = "telescrape", bind = FALSE, meta=FALSE, datecol=FALSE) {
 
-    # valid column names
-    logical_cols <- c("member_count", "broadcast", "isDeleted",
-                    "hasComments", "isComment")
-    numeric_cols <- c("id", "user_id", "views", "replyToId")
-    character_cols <- c("channel", "content", "first_and_last_name", "username",
-                      "bot_url", "parent", "forward",
-                      "forward_id", "forward_msg_id", "media", "URLs")
-    datetime_cols <- c("timestamp", "edit.date", "forward_date")
-    date_cols <- c("date")
+  if (lib == "telescrape") {
 
-    # cbind valid columns
-    telescrape_header <- cbind.data.frame(
-      .initialize_cols(logical_cols, as.logical),
-      .initialize_cols(numeric_cols, as.numeric),
-      .initialize_cols(character_cols, as.character),
-      .initialize_cols(datetime_cols, as.character),
-      .initialize_cols(date_cols, as.character)
-    )
+      # telescrape telegram message scraper ("github.com/PeterWalchhofer/Telescrape")
+
+      # valid column names
+      # future .telescrape_cols?
+      logical_cols <- c("member_count", "broadcast", "isDeleted",
+                      "hasComments", "isComment")
+      numeric_cols <- c("id", "user_id", "views", "replyToId")
+      character_cols <- c("channel", "content", "first_and_last_name", "username",
+                        "bot_url", "parent", "forward",
+                        "forward_id", "forward_msg_id", "media", "URLs")
+      datetime_cols <- c("timestamp", "edit.date", "forward_date")
+      date_cols <- c("date")
+
+      # cbind valid columns
+      telescrape_header <- cbind.data.frame(
+        .initialize_cols(logical_cols, as.logical),
+        .initialize_cols(numeric_cols, as.numeric),
+        .initialize_cols(character_cols, as.character),
+        .initialize_cols(datetime_cols, as.character),
+        .initialize_cols(date_cols, as.character)
+      )
+
+      header.defined <- if (lib == "telescrape") telescrape_header
+
+      process_data_frame <- function(df) {
+        if (!.validate_cols(df, names(header.defined))) {
+          stop("Data frame contains invalid columns. Is the data source invalid or modified?")
+        }
+        .coerce_df(df, header.defined)
+      }
+
+      if (is.data.frame(tg_list)) {
+
+        # this is where `tg_list` is passed to the `df` args in utils:
+        table <- process_data_frame(tg_list)
+
+        # else if list of data.frames:
+      } else if (is.list(tg_list)) {
+        table <- lapply(tg_list, process_data_frame)
+
+        # this is where to put logic for handling .vector_logic by looping over
+        # each data.frame in the list of `tg_list`
+
+        # if bind, do bind_rows:
+        if (bind) {
+          table <- bind_rows(table)
+        }
+
+        # if invalid input:
+      } else {
+
+        stop("Invalid input type")
+
+      }
+
+        table$edit.date <- as_datetime(table$edit.date)
+        table$forward_date <- as_datetime(table$forward_date)
+        table$timestamp <- as_datetime(table$timestamp)
+
+    }
 
     # future .json export definition will go here:
 
-    # define chosen library
-    header.defined <- if (lib == "telescrape") telescrape_header else api_definition
+    # telescrape library has a weird regex mistake? it's deprecated, so this is necessary:
+    # I have to include this in section, not the previous. Not sure why, not a big deal.
 
-    # process data frame
-    process_data_frame <- function(df) {
-      if (!.validate_cols(df, names(header.defined))) {
-        stop("Data frame contains invalid columns. Is the data source invalid or modified?")
-      }
-      .coerce_df(df, header.defined)
-    }
 
-    # if data.frame:
-    if (is.data.frame(tg_list)) {
-      inter <- process_data_frame(tg_list)
+  if (lib == "telescrape") {
 
-      # else if list of data.frames:
-    } else if (is.list(tg_list)) {
-      inter <- lapply(tg_list, process_data_frame)
+    table <- .fix_url_vec(table = table)
 
-      # if bind, do bind_rows:
-      if (bind) {
-        inter <- bind_rows(inter)
-      }
-
-    # if invalid input:
-    } else {
-
-      stop("Invalid input type")
-
-    }
-
-    # return inter (combined data.frame / or the list of data.frames if bind = FALSE):
-
-    inter$edit.date <- as_datetime(inter$edit.date)
-    inter$forward_date <- as_datetime(inter$forward_date)
-    inter$timestamp <- as_datetime(inter$timestamp)
-
-    if ("date" %in% colnames(date)) {
-
-      inter$date <- as.Date(inter$timestamp)
-
-    }
-    if (datecol) {
-
-      inter$date <- as.Date(inter$timestamp)
-
-    }
-
-    return(inter)
-
+    return(table)
   }
+
+}

@@ -21,7 +21,7 @@ is returned. If FALSE, a list of data.frames is returned.}
 coercion that makes per day statistical data easier.}
 }
 \value{
-A data.frame (or list of data.frames if bind=FALSE)
+A data.frame (or list of data.frames if bind = FALSE)
 }
 \description{
 \code{tg_normalize} normalizes the input data from a list of data.frames or a data.frame
