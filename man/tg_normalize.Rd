@@ -4,7 +4,13 @@
 \alias{tg_normalize}
 \title{Validate Telegram Data}
 \usage{
-tg_normalize(tg_list, lib = "telescrape", bind = FALSE, datecol = FALSE)
+tg_normalize(
+  tg_list,
+  lib = "telescrape",
+  bind = FALSE,
+  meta = FALSE,
+  datecol = FALSE
+)
 }
 \arguments{
 \item{tg_list}{A list of data.frame objects or a data.frame object. All data

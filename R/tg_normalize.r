@@ -126,14 +126,9 @@
 #' should be bound into a single data.frame object. If TRUE, a single data.frame
 #' is returned. If FALSE, a list of data.frames is returned.
 #'
-#' @param datecol A Boolean argument to add a "date" column, which is an as.date()
-#'  coercion that makes per day statistical data easier.
-#'
 #' @return A data.frame (or list of data.frames if bind = FALSE)
-#'
-#' @example test2 <- tg_normalize(test, lib="telescrape", bind=TRUE, meta=FALSE)
 #' @export
-tg_normalize <- function(tg_list, lib = "telescrape", bind = FALSE, meta=FALSE, datecol=FALSE) {
+tg_normalize <- function(tg_list, lib = "telescrape", bind = FALSE, datecol=FALSE) {
 
   if (lib == "telescrape") {
 
@@ -159,8 +154,10 @@ tg_normalize <- function(tg_list, lib = "telescrape", bind = FALSE, meta=FALSE, 
         .initialize_cols(date_cols, as.character)
       )
 
-      header.defined <- if (lib == "telescrape") telescrape_header
+      # define header given header library
+      header.defined <- telescrape_header
 
+      # process data.frame
       process_data_frame <- function(df) {
         if (!.validate_cols(df, names(header.defined))) {
           stop("Data frame contains invalid columns. Is the data source invalid or modified?")
@@ -198,16 +195,13 @@ tg_normalize <- function(tg_list, lib = "telescrape", bind = FALSE, meta=FALSE, 
 
     }
 
-    # future .json export definition will go here:
+  # future .json export definition will go here:
 
-    # telescrape library has a weird regex mistake? it's deprecated, so this is necessary:
-    # I have to include this in section, not the previous. Not sure why, not a big deal.
-
+  # telescrape library has a weird regex mistake? it's deprecated, so this is necessary:
+  # Weird scoping thing, we have to put this here:
 
   if (lib == "telescrape") {
-
     table <- .fix_url_vec(table = table)
-
     return(table)
   }
 
