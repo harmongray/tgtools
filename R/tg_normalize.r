@@ -11,16 +11,13 @@
 #' @noRd
 .coerce_df <- function(df, vec) {
   df[] <- lapply(names(df), function(colname) {
-    column_data <- df[[colname]]
-
     if (colname %in% names(vec)) {
-      type <- class(vec[[colname]])
-      column_data <- type.convert(column_data, as.is=TRUE, mode=type)
+      coerce_function <- match.fun(paste0("as.", class(vec[[colname]])))
+      coerce_function(df[[colname]])
+    } else {
+      df[[colname]]
     }
-
-    return(column_data)
   })
-
   return(df)
 }
 
@@ -189,20 +186,31 @@ tg_normalize <- function(tg_list, lib = "telescrape", bind = FALSE, datecol=FALS
 
       }
 
-        table$edit.date <- as_datetime(table$edit.date)
-        table$forward_date <- as_datetime(table$forward_date)
-        table$timestamp <- as_datetime(table$timestamp)
+      # coerce table dates:
 
     }
 
-  # future .json export definition will go here:
+  if (lib == "telescrape") {
 
-  # telescrape library has a weird regex mistake? it's deprecated, so this is necessary:
-  # Weird scoping thing, we have to put this here:
+
+    table$edit.date <- as_datetime(table$edit.date, truncated=3)
+    table$forward_date <- as_datetime(table$forward_date)
+    table$timestamp <- as_datetime(table$timestamp)
+
+  }
+
+
+
+  # telescrape library has a weird regex mistake?
+  # Weird scoping thing, we have to put this here, not in "if (lib="telescrape")"
 
   if (lib == "telescrape") {
     table <- .fix_url_vec(table = table)
     return(table)
   }
+
+
+  # future .json export definition will go here:
+
 
 }
